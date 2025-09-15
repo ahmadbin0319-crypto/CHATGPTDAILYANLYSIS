@@ -1,5 +1,5 @@
 requests
-python-telegram-bot
 schedule
 pytz
 apscheduler
+python-telegram-bot==13.15
