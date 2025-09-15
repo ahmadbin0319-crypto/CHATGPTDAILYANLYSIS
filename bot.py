@@ -199,7 +199,7 @@ def live_price_monitor():
 # ======================
 # Main
 # ======================
-if _name_ == "_main_":
+if __name__ == "_main_":
     updater = Updater(token=TELEGRAM_BOT_TOKEN, use_context=True)
     dp = updater.dispatcher
 
