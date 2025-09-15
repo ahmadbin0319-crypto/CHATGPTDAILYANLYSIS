@@ -26,9 +26,7 @@ PKT_TZ = pytz.timezone("Asia/Karachi")
 def get_xauusd_data(interval="15min", outputsize=30):
     url = f"https://api.twelvedata.com/time_series?symbol=XAU/USD&interval={interval}&outputsize={outputsize}&apikey={TWELVEDATA_API_KEY}"
     r = requests.get(url).json()
-    if "values" in r:
-        return r["values"]
-    return []
+    return r.get("values", [])
 
 def get_btcusd_data(interval="15m", limit=30):
     url = f"https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval={interval}&limit={limit}"
@@ -77,22 +75,22 @@ def detect_candle_pattern(candle, prev_candle):
 # ======================
 def analyze_market():
     xau_data_15m = get_xauusd_data("15min")
-    if not xau_data_15m:
+    if len(xau_data_15m) < 2:
         return "⚠ XAUUSD data fetch failed."
     last_xau, prev_xau = xau_data_15m[0], xau_data_15m[1]
     xau_pattern = detect_candle_pattern(last_xau, prev_xau)
     xau_price = last_xau["close"]
 
     btc_data_15m = get_btcusd_data("15m")
-    if not btc_data_15m:
+    if len(btc_data_15m) < 2:
         return "⚠ BTCUSD data fetch failed."
     last_btc, prev_btc = btc_data_15m[-1], btc_data_15m[-2]
     btc_pattern = detect_candle_pattern(last_btc, prev_btc)
     btc_price = last_btc["close"]
 
     msg = f"📊 Daily Analysis Update\n\n"
-    msg += f"🟡 XAUUSD (Gold)\nPrice: ${xau_price}\nPattern: {xau_pattern if xau_pattern else 'No clear signal'}\nSL=20 | TP=80\n\n"
-    msg += f"₿ BTCUSD (Bitcoin)\nPrice: ${btc_price}\nPattern: {btc_pattern if btc_pattern else 'No clear signal'}\nSL=300-400 | TP=1200-1600\n\n"
+    msg += f"🟡 XAUUSD (Gold)\nPrice: ${xau_price}\nPattern: {xau_pattern or 'No clear signal'}\nSL=20 | TP=80\n\n"
+    msg += f"₿ BTCUSD (Bitcoin)\nPrice: ${btc_price}\nPattern: {btc_pattern or 'No clear signal'}\nSL=300-400 | TP=1200-1600\n\n"
     msg += "💥 Liquidity Zones:\n- XAUUSD: 3620 & 3670\n- BTCUSD: 115k & 118k\n\n"
     msg += "📌 Plan:\n- Wait 15m/1h confirmation.\n- Focus London & NY session.\n"
     return msg
@@ -105,22 +103,22 @@ def start(update: Update, context: CallbackContext):
 
 def xau(update: Update, context: CallbackContext):
     data = get_xauusd_data("15min")
-    if not data:
+    if len(data) < 2:
         update.message.reply_text("⚠ XAUUSD data fetch failed.")
         return
     last, prev = data[0], data[1]
     pattern = detect_candle_pattern(last, prev)
-    msg = f"🟡 XAUUSD\nPrice: {last['close']}\nPattern: {pattern if pattern else 'No signal'}\nSL=20 | TP=80"
+    msg = f"🟡 XAUUSD\nPrice: {last['close']}\nPattern: {pattern or 'No signal'}\nSL=20 | TP=80"
     update.message.reply_text(msg)
 
 def btc(update: Update, context: CallbackContext):
     data = get_btcusd_data("15m")
-    if not data:
+    if len(data) < 2:
         update.message.reply_text("⚠ BTCUSD data fetch failed.")
         return
     last, prev = data[-1], data[-2]
     pattern = detect_candle_pattern(last, prev)
-    msg = f"₿ BTCUSD\nPrice: {last['close']}\nPattern: {pattern if pattern else 'No signal'}\nSL=300-400 | TP=1200-1600"
+    msg = f"₿ BTCUSD\nPrice: {last['close']}\nPattern: {pattern or 'No signal'}\nSL=300-400 | TP=1200-1600"
     update.message.reply_text(msg)
 
 def analysis(update: Update, context: CallbackContext):
@@ -171,7 +169,8 @@ def live_price_monitor():
 # Main
 # ======================
 if __name__ == "__main__":
-    updater = Updater(token=TELEGRAM_BOT_TOKEN, use_context=True)
+    # Updated Updater init for v13.15
+    updater = Updater(TELEGRAM_BOT_TOKEN, use_context=True)
     dp = updater.dispatcher
 
     dp.add_handler(CommandHandler("start", start))
@@ -179,6 +178,7 @@ if __name__ == "__main__":
     dp.add_handler(CommandHandler("btc", btc))
     dp.add_handler(CommandHandler("analysis", analysis))
 
+    # Schedule jobs and start live monitor
     schedule_jobs()
     threading.Thread(target=live_price_monitor, daemon=True).start()
 
