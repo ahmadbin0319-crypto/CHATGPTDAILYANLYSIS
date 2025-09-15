@@ -30,7 +30,6 @@ def get_xauusd_data(interval="15min", outputsize=30):
         return r["values"]
     return []
 
-
 def get_btcusd_data(interval="15m", limit=30):
     url = f"https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval={interval}&limit={limit}"
     r = requests.get(url).json()
@@ -51,7 +50,6 @@ def get_btcusd_data(interval="15m", limit=30):
 def detect_candle_pattern(candle, prev_candle):
     o, h, l, c = float(candle["open"]), float(candle["high"]), float(candle["low"]), float(candle["close"])
     po, ph, pl, pc = float(prev_candle["open"]), float(prev_candle["high"]), float(prev_candle["low"]), float(prev_candle["close"])
-
     body = abs(c - o)
     wick_up = h - max(o, c)
     wick_down = min(o, c) - l
@@ -100,7 +98,7 @@ def analyze_market():
     return msg
 
 # ======================
-# Telegram Command Handlers
+# Telegram Handlers
 # ======================
 def start(update: Update, context: CallbackContext):
     update.message.reply_text("👋 Commands: /xau /btc /analysis")
@@ -140,7 +138,7 @@ def schedule_jobs():
     scheduler.start()
 
 # ======================
-# Live Key Level Alerts
+# Live Price Monitor
 # ======================
 XAU_KEY_SUPPORTS = [3620, 3600]
 XAU_KEY_RESISTANCES = [3650, 3670]
@@ -182,9 +180,7 @@ if __name__ == "__main__":
     dp.add_handler(CommandHandler("analysis", analysis))
 
     schedule_jobs()
-
     threading.Thread(target=live_price_monitor, daemon=True).start()
 
     updater.start_polling()
     updater.idle()
-
